@@ -36,7 +36,7 @@ else:
 
     if uploaded_file is not None:
         filename, file_extension = os.path.splitext(uploaded_file.name)
-        if file_extension[1:] in SUPPORTED_FILETYPES:
+        if file_extension.lower().endswith(SUPPORTED_FILETYPES):
             video_bytes = uploaded_file.getvalue()
             submit_button = st.button("Start summarization")
         else:
