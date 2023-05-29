@@ -13,7 +13,7 @@ from src import (
 
 OCR_SAMPLE_RATE = 600
 API_MODEL_NAME = "gpt-3.5-turbo"
-SUPPORTED_FILETYPES = ["mp4", "avi", "mov", "mkv", "wmv"]
+SUPPORTED_FILETYPES = ("mp4", "avi", "mov", "mkv", "wmv")
 
 ocr_helper = video_ocr.OCRHelper(sample_rate=OCR_SAMPLE_RATE)
 text_extractor = video_asr.ASRHelper()
