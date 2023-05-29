@@ -15,16 +15,13 @@ OCR_SAMPLE_RATE = 600
 API_MODEL_NAME = "gpt-3.5-turbo"
 SUPPORTED_FILETYPES = ("mp4", "avi", "mov", "mkv", "wmv")
 
-ocr_helper = video_ocr.OCRHelper(sample_rate=OCR_SAMPLE_RATE)
-text_extractor = video_asr.ASRHelper()
-chat_handler = api_calls.ChatHandler(API_MODEL_NAME)
-
 def clear_submit():
     st.session_state["submit"] = False
 
 st.header("🎥Video Presentation Summarization")
 
 sidebar()
+
 if "OPENAI_API_KEY" not in st.session_state or not st.session_state["OPENAI_API_KEY"]:
     st.error("Please enter your OpenAI API key in the sidebar.")
 else:
@@ -43,6 +40,11 @@ else:
         
         if submit_button:
             try:
+
+                ocr_helper = video_ocr.OCRHelper(sample_rate=OCR_SAMPLE_RATE)
+                text_extractor = video_asr.ASRHelper()
+                chat_handler = api_calls.ChatHandler(API_MODEL_NAME)
+
                 progress_bar = st.progress(0)
                 # Perform OCR on the video
                 with st.spinner("Performing OCR on video⏳"):
