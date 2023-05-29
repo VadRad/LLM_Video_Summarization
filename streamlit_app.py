@@ -1,5 +1,8 @@
 import streamlit as st
 import os
+import gc
+
+st.set_page_config(page_title="Video Summarization", page_icon="🎥", layout="wide")
 
 from components.sidebar import sidebar
 from src import (
@@ -8,18 +11,17 @@ from src import (
     video_ocr
 )
 
-OCR_SAMPLE_RATE = 2
+OCR_SAMPLE_RATE = 600
 API_MODEL_NAME = "gpt-3.5-turbo"
 SUPPORTED_FILETYPES = ["mp4", "avi", "mov", "mkv", "wmv"]
 
-ocr_helper = video_ocr.OCRHelper(filepath=None, sample_rate=OCR_SAMPLE_RATE)
-text_extractor = video_asr.ASRHelper(audio_path=None)
+ocr_helper = video_ocr.OCRHelper(sample_rate=OCR_SAMPLE_RATE)
+text_extractor = video_asr.ASRHelper()
 chat_handler = api_calls.ChatHandler(API_MODEL_NAME)
 
 def clear_submit():
     st.session_state["submit"] = False
 
-st.set_page_config(page_title="Video Summarization", page_icon="🎥", layout="wide")
 st.header("🎥Video Presentation Summarization")
 
 sidebar()
@@ -35,11 +37,8 @@ else:
     if uploaded_file is not None:
         filename, file_extension = os.path.splitext(uploaded_file.name)
         if file_extension[1:] in SUPPORTED_FILETYPES:
-            video_path = f"{uploaded_file.name}"
-            with open(video_path, "wb") as out_file:
-                out_file.write(uploaded_file.getbuffer())
-                submit_button = st.button("Start summarization")
-            st.video(video_path)
+            video_bytes = uploaded_file.getvalue()
+            submit_button = st.button("Start summarization")
         else:
             raise ValueError("File type not supported!")
         
@@ -48,19 +47,17 @@ else:
                 progress_bar = st.progress(0)
                 # Perform OCR on the video
                 with st.spinner("Performing OCR on video⏳"):
-                    ocr_helper.filepath = video_path
-                    ocr_text = ocr_helper.perform_video_ocr()
+                    ocr_text = ocr_helper.perform_video_ocr(video_bytes)
 
                 st.markdown("✔️ OCR done")
                 progress_bar.progress(0.33)
 
                 # Perform ASR on the audio
                 with st.spinner("Performing ASR on video⏳"):
-                    text_extractor.audio_path = video_path
-                    asr_text = text_extractor.extract_text_from_audio()
+                    asr_text = text_extractor.extract_text_from_audio(video_bytes)
 
-                progress_bar.progress(0.66)
                 st.markdown("✔️ ASR done")
+                progress_bar.progress(0.66)
 
                 # Get summary
                 with st.spinner("Collecting summary⏳"):
@@ -83,7 +80,3 @@ else:
                 st.error(f'Error processing video: {e}')
                 st.warning('Please try again with a different video or check the video format.')
                 clear_submit()
-
-            finally:
-                # Cleanup
-                os.remove(video_path)

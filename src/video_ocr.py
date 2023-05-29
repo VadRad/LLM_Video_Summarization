@@ -1,5 +1,5 @@
 import cv2 as cv
-import os
+import imageio.v3 as iio
 import re
 import scipy.fft
 from itertools import tee
@@ -23,8 +23,7 @@ class Frame:
 
 
 class OCRHelper:
-    def __init__(self, filepath, sample_rate):
-        self.filepath = filepath
+    def __init__(self, sample_rate):
         self.sample_rate = sample_rate
 
     @staticmethod
@@ -61,26 +60,19 @@ class OCRHelper:
         frame.text = text
         return frame
 
-    def _get_frames(self, video_capture):
-        fps = int(video_capture.get(cv.CAP_PROP_FPS))
-        frame_number = 0
-        while video_capture.isOpened():
-            ret, frame = video_capture.read()
-            if not ret:
-                break
-            frame_number += 1
-            if frame_number % (fps // self.sample_rate) != 0:
+    def _get_frames(self, video_bytes):
+        for i, frame in enumerate(iio.imiter(video_bytes, format_hint=".webm")):
+            if i % self.sample_rate != 0:
                 continue
             frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-            yield Frame(frame_number, frame, frame_number // fps)
+            yield Frame(i, frame, i // self.sample_rate)
 
-    def perform_video_ocr(self):
-        logging.info(f"Starting OCR on video: {self.filepath}")
+    def perform_video_ocr(self, video_bytes):
+        logging.info(f"Starting OCR on video")
         frames = []
-        cap = cv.VideoCapture(self.filepath)
         with ThreadPool(multiprocessing.cpu_count()) as pool:
             frames = pool.map(OCRHelper._ocr,
-                              self._filter_redundant_frames(self._get_frames(cap)),
+                              self._filter_redundant_frames(self._get_frames(video_bytes)),
                               chunksize=multiprocessing.cpu_count())
 
         frames.sort(key=lambda frame: frame.frame_number)
@@ -90,5 +82,5 @@ class OCRHelper:
         clean_text = re.sub(r'\s+', ' ', clean_text) 
         clean_text = clean_text.strip() 
                     
-        logging.info(f"OCR completed on video: {self.filepath}")
+        logging.info(f"OCR completed on video")
         return clean_text
